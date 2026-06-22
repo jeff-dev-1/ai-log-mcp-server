@@ -23,7 +23,8 @@ GATEWAY_READ_TOOLS = {
     "gateway_pentest_report", "gateway_supply_chain_samples",
 }
 WRITE_TOOLS = {"upload_logs"}
-EXPECTED_TOOLS = CORE_TOOLS | GATEWAY_READ_TOOLS | WRITE_TOOLS  # 4 + 7 + 1 = 12
+GATEWAY_ACTION_TOOLS = {"gateway_guardrail_test", "gateway_supply_chain_check"}
+EXPECTED_TOOLS = CORE_TOOLS | GATEWAY_READ_TOOLS | WRITE_TOOLS | GATEWAY_ACTION_TOOLS  # 4+7+1+2 = 14
 
 
 async def _run() -> int:

@@ -90,6 +90,22 @@
 测试总览（本批后）：`pytest -q` → 36 passed, 2 deselected；`scripts/smoke_stdio.py` → SMOKE OK（12 tools）。
 集成（含真上传副作用）：`pytest -m integration -q` → 2 passed；仅连通性用 `pytest -m integration -k "not upload"`。
 
+### gateway 写操作批次验收记录（step-6a..6c）
+
+> 范围判断：5 个 POST 中，动作类 2 个纳入（§3.3b）；3 个 *-report POST 为 CI-only，Out-of-Scope（§5）。不改已冻结的 12 个 tool。
+
+| # | 标准 | 结论 | 验证命令 / 证据 |
+| --- | --- | --- | --- |
+| W1 | 范围判断落档：纳入 2 / 排除 3（写明理由） | ✅ | DESIGN §3.3b（纳入）+ §5（CI-only 排除三条理由） |
+| W2 | 2 个 tool 注册，tools/list 总数 12→14 | ✅ | `scripts/smoke_stdio.py` 断言 14 个且含 2 个新名 |
+| W3 | body schema 现查 openapi、可追溯 | ✅ | `guardrail_test`→`GuardrailTestRequest`；`supply_chain_check`→`SupplyChainCheckRequest`（必填 marketplace/item_id，可选 version） |
+| W4 | guardrail_test 透传 + body 正确 | ✅ | 单测 `test_guardrail_test_ok_and_body`；实跑注入文本→`verdict=BLOCKED` |
+| W5 | supply_chain_check 透传；version 仅在提供时发 | ✅ | 单测 `test_supply_chain_check_ok_with_version` / `_omits_absent_version`；实跑 pypi/httpx→真实判定 |
+| W6 | 平台非 2xx → DESIGN §4 结构化错误 | ✅ | 单测 `test_guardrail_test_non_2xx_structured_error`（422） |
+| W7 | 不做改平台状态的默认 integration | ✅ | 本批未加 integration 用例；实跑仅一次性人工验证（observability 计数+2，无业务数据写入） |
+
+测试总览（本批后）：`pytest -q` → 41 passed, 2 deselected；`scripts/smoke_stdio.py` → SMOKE OK（14 tools）。
+
 ## 变更流程（平台 API 变更时）
 
 ```
