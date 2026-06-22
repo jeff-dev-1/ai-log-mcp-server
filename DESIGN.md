@@ -65,11 +65,22 @@ ${APP_BASE_URL}/openapi.json
 | --- | --- | --- | --- | --- | --- |
 | `upload_logs` | `POST /logs/upload`（multipart） | `Body_upload_logs_upload_post`：`file`(必填) + `source`(enum) → tool 入参 `file_path?`/`content?`(互斥)/`filename?`/`source?` | `#/components/schemas/UploadResponse` | 写 | 上传日志文件做分析（方案见 §6） |
 
+### 3.3b 网关动作（写/查询，已实现）
+
+> 「送入参→得裁定」类用户能力。POST + JSON body；body schema 现查 openapi。
+
+| MCP tool | HTTP 方法 + 路径 | 入参（openapi） | 出参（openapi） | 类型 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `gateway_guardrail_test` | `POST /gateway/guardrail-test` | `#/components/schemas/GuardrailTestRequest`（必填 `text`） | `#/components/schemas/GuardrailTestResponse` | 写形 | 送一段文本，得护栏（guardrail）裁定 |
+| `gateway_supply_chain_check` | `POST /gateway/supply-chain-check` | `#/components/schemas/SupplyChainCheckRequest`（必填 `marketplace`/`item_id`；可选 `version`） | `#/components/schemas/SupplyChainVerdict` | 写形 | 送依赖标识，得供应链安全判定 |
+
+> 「写形」：方法为 POST，但语义是裁定/查询，不写业务数据（仅会令 gateway observability 计数+1）。
+
 ### 3.3 待后续批次（仍未实现）
 
 | 候选 tool | 端点 | 类型 | 推迟原因 |
 | --- | --- | --- | --- |
-| gateway 写操作（`guardrail-test` / `supply-chain-check` / 提交 redteam·supply-chain·pentest report 共 5 端点） | `POST /gateway/*` | 写 | 写副作用，单独成批 |
+| —（无） | — | — | gateway 写操作中"动作类"已纳入 §3.3b；剩余 3 个 *-report POST 见 §5（Out of Scope, CI-only） |
 
 > 推迟项不代表 Out of Scope（见 §5）；它们是未来批次，届时回到阶段 1 续填本表。
 
@@ -84,6 +95,10 @@ ${APP_BASE_URL}/openapi.json
 
 - 不暴露前端专用 / 登录相关端点（若 openapi 中存在）。
 - 不做分页聚合、缓存、字段裁剪等「平台逻辑」——交给调用方或平台。
+- **3 个 *-report 的 POST**（`POST /gateway/redteam-report` / `supply-chain-report` / `pentest-report`）：**CI-only，不暴露为 tool**。理由：
+  - 其 body 是整份扫描产物（与各自 GET 响应同形），由 CI/扫描器生成并写回，**非用户在对话中能提供的入参**；
+  - 用户**读取**这些报告的需求已由 gateway 只读批的对应 **GET**（§3.2）覆盖，足够；
+  - 暴露写回会让 MCP 客户端覆盖平台报告状态，超出"日志分析"用户能力边界。
 
 ## 6. multipart 上传方案（`upload_logs` 设计，暂不实现）
 
