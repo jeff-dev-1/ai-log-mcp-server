@@ -14,13 +14,23 @@ BATCH_4B = {
     "gateway_prompts": "/gateway/prompts",
 }
 
+# step-4c 批次（网关安全报告）
+BATCH_4C = {
+    "gateway_redteam_report": "/gateway/redteam-report",
+    "gateway_supply_chain_report": "/gateway/supply-chain-report",
+    "gateway_pentest_report": "/gateway/pentest-report",
+    "gateway_supply_chain_samples": "/gateway/supply-chain/samples",
+}
 
-def test_batch_4b_registered():
+ALL_GATEWAY = {**BATCH_4B, **BATCH_4C}
+
+
+def test_all_gateway_reads_registered():
     names = {t.name for t in tools.TOOLS}
-    assert set(BATCH_4B) <= names
+    assert set(ALL_GATEWAY) <= names
 
 
-@pytest.mark.parametrize("name,path", list(BATCH_4B.items()))
+@pytest.mark.parametrize("name,path", list(ALL_GATEWAY.items()))
 def test_gateway_read_ok_passthrough(mock_rest, name, path):
     payload = {"sentinel": name}
     mock_rest.add("GET", path, json=payload)

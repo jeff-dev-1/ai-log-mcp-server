@@ -75,6 +75,22 @@ GATEWAY_READS: dict[str, tuple[str, str]] = {
         "/gateway/prompts",
         "返回 AI 网关使用的提示词：系统提示词（system_prompts）与各场景提示词（scenario_prompts）。",
     ),
+    "gateway_redteam_report": (
+        "/gateway/redteam-report",
+        "返回红队测试报告：整体通过率、按类别（注入/越狱/PII 等）的通过情况与失败用例明细。",
+    ),
+    "gateway_supply_chain_report": (
+        "/gateway/supply-chain-report",
+        "返回供应链安全检查报告：放行/拦截/待审批计数、被拦截与待审批条目，以及各依赖项的判定结果。",
+    ),
+    "gateway_pentest_report": (
+        "/gateway/pentest-report",
+        "返回渗透测试报告：测试目标、闸门（gate）结论、高/中危数量与各项安全发现（findings）。",
+    ),
+    "gateway_supply_chain_samples": (
+        "/gateway/supply-chain/samples",
+        "返回供应链检查的可选样本：是否启用、支持的市场（PyPI/npm/HuggingFace 等）与可供检查的示例样本。",
+    ),
 }
 
 for _name, (_path, _desc) in GATEWAY_READS.items():
