@@ -39,7 +39,25 @@ TOOLS: list[types.Tool] = [
         description="平台健康/连通检查（GET /health）。",
         inputSchema={"type": "object", "properties": {}, "required": []},
     ),
+    types.Tool(
+        name="chat_query",
+        description="对日志做 AI 问答/分析（POST /chat/query）。schema 源自 ChatRequest。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "minLength": 1, "maxLength": 2000, "description": "问题（必填）"},
+                "log_id": {"type": "string", "format": "uuid", "description": "限定某条日志（可选 UUID）"},
+                "top_k": {"type": "integer", "minimum": 1, "maximum": 20, "description": "检索条数（可选，平台默认 5）"},
+                "backend": {"type": "string", "enum": ["deepseek", "qwen"], "description": "模型后端（可选，平台默认 deepseek）"},
+                "scenario": {"type": "string", "maxLength": 80, "description": "场景：VS 综合 / 健康巡检 / SSL / 告警 / 慢根因 / 错误码 / 安全运营（可选）"},
+            },
+            "required": ["question"],
+        },
+    ),
 ]
+
+# chat_query 允许透传给平台的字段（来自 ChatRequest）。
+_CHAT_FIELDS = ("question", "log_id", "top_k", "backend", "scenario")
 
 
 def _error(status: int, body) -> dict:
@@ -64,6 +82,10 @@ def call(name: str, arguments: dict):
         status, body = rest_client.request_json("GET", f"/logs/jobs/{job_id}")
     elif name == "health":
         status, body = rest_client.request_json("GET", "/health")
+    elif name == "chat_query":
+        # 只透传 ChatRequest 定义的字段；缺省值交给平台，不在本地臆造。
+        payload = {k: arguments[k] for k in _CHAT_FIELDS if arguments.get(k) is not None}
+        status, body = rest_client.request_json("POST", "/chat/query", json=payload)
     else:
         raise ValueError(f"unknown tool: {name}")
 

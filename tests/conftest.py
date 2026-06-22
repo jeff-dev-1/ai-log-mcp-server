@@ -17,12 +17,19 @@ class _Router:
 
     def __init__(self):
         self._routes = {}
+        self.requests = []  # 记录收到的请求，供断言 body 组装
 
     def add(self, method: str, path: str, *, status: int = 200, json=None, text=None):
         """注册一个 mock 响应。json/text 二选一。"""
         self._routes[(method.upper(), path)] = (status, json, text)
 
     def _handler(self, request: httpx.Request) -> httpx.Response:
+        try:
+            body = _json.loads(request.content) if request.content else None
+        except ValueError:
+            body = None
+        self.requests.append({"method": request.method.upper(), "path": request.url.path,
+                              "params": dict(request.url.params), "json": body})
         key = (request.method.upper(), request.url.path)
         if key not in self._routes:
             return httpx.Response(404, json={"detail": f"no mock for {key}"})
