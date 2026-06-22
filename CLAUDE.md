@@ -29,7 +29,8 @@ ai-log-mcp-server/
 ├── WORKFLOW.md        # L3 阶段协议
 ├── README.md          # 给人看：怎么跑、怎么注册
 ├── docs/
-│   └── PRD.md         # 产品需求（目标用户/MVP 边界/数据流/验收/风险）
+│   ├── PRD.md         # 产品需求（目标用户/MVP 边界/数据流/验收/风险）
+│   └── BUILD-FROM-ZERO.md # 从 0 跟做手册（逐 step 轨迹/端点盘点/复现指引）
 ├── scripts/
 │   └── smoke_stdio.py # stdio 协议级冒烟（官方 mcp SDK client over stdio）
 ├── tests/             # pytest 单测（mock REST）+ 可选 @integration
