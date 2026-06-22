@@ -28,6 +28,8 @@ ai-log-mcp-server/
 ├── DESIGN.md          # L2 设计：MCP tool ↔ REST 端点映射
 ├── WORKFLOW.md        # L3 阶段协议
 ├── README.md          # 给人看：怎么跑、怎么注册
+├── docs/
+│   └── PRD.md         # 产品需求（目标用户/MVP 边界/数据流/验收/风险）
 └── src/ai_log_mcp/    # 代码（本轮不产，后续按 DESIGN 实现）
 ```
 
