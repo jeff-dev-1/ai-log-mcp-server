@@ -6,9 +6,14 @@
 - 非 2xx 按 DESIGN §4 返回结构化错误（status + body），不吞错、不重试登录。
 """
 
+import os
+
 import mcp.types as types
 
-from . import rest_client
+from . import config, rest_client
+
+# /logs/upload 的 source 枚举（现查 openapi: Body_upload_logs_upload_post.source）。
+UPLOAD_SOURCES = ("nginx", "app", "custom")
 
 # ── tool 定义（schema 源自 ${APP_BASE_URL}/openapi.json）───────────────────────
 TOOLS: list[types.Tool] = [
@@ -102,10 +107,74 @@ for _name, (_path, _desc) in GATEWAY_READS.items():
         )
     )
 
+# ── upload_logs（multipart，DESIGN §6）─────────────────────────────────────────
+TOOLS.append(
+    types.Tool(
+        name="upload_logs",
+        description=(
+            "上传日志文件做分析（POST /logs/upload，multipart）。"
+            "二选一：file_path（本地路径，首选）或 content（内联文本，兜底），二者互斥。"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string", "description": "本地文件路径（与 content 互斥，首选）"},
+                "content": {"type": "string", "description": "日志内容内联文本（与 file_path 互斥，兜底）"},
+                "filename": {"type": "string", "description": "上传文件名（仅配合 content；file_path 缺省取其 basename）"},
+                "source": {"type": "string", "enum": list(UPLOAD_SOURCES), "description": "日志来源（可选，平台默认 custom）"},
+            },
+            "required": [],
+        },
+    )
+)
+
 
 def _error(status: int, body) -> dict:
-    """DESIGN §4 结构化错误。"""
+    """DESIGN §4 结构化错误（平台非 2xx）。"""
     return {"error": True, "status": status, "body": body}
+
+
+def _validation_error(detail: str) -> dict:
+    """tool 侧前置校验失败的结构化错误（不抛栈，DESIGN §6.4）。"""
+    return {"error": True, "status": "validation_error", "body": {"detail": detail}}
+
+
+def _prepare_upload(arguments: dict):
+    """校验并组装 (files, data)。失败返回 ({"error":...}, None)；成功返回 (None, (files, data))。"""
+    file_path = arguments.get("file_path")
+    content = arguments.get("content")
+    filename = arguments.get("filename")
+    source = arguments.get("source")
+    max_bytes = config.get_upload_max_bytes()
+
+    # 互斥：恰好其一。
+    if bool(file_path) == bool(content):
+        return _validation_error("file_path 与 content 必须二选一（不能同时提供或都不提供）"), None
+
+    # source 枚举校验（仅在提供时；非法则拦截，不透传给平台吃 422）。
+    if source is not None and source not in UPLOAD_SOURCES:
+        return _validation_error(f"source 非法：{source!r}，允许值 {list(UPLOAD_SOURCES)}"), None
+
+    if file_path:
+        if not os.path.exists(file_path):
+            return _validation_error(f"file_path 不存在：{file_path}"), None
+        if not os.path.isfile(file_path):
+            return _validation_error(f"file_path 不是普通文件：{file_path}"), None
+        size = os.path.getsize(file_path)
+        if size > max_bytes:
+            return _validation_error(f"文件超过上限：{size} > {max_bytes} 字节"), None
+        with open(file_path, "rb") as f:
+            data_bytes = f.read()
+        upload_name = filename or os.path.basename(file_path)
+    else:
+        data_bytes = content.encode("utf-8")
+        if len(data_bytes) > max_bytes:
+            return _validation_error(f"content 超过上限：{len(data_bytes)} > {max_bytes} 字节（大文件请改用 file_path）"), None
+        upload_name = filename or "upload.log"
+
+    files = {"file": (upload_name, data_bytes)}
+    form = {"source": source} if source is not None else None
+    return None, (files, form)
 
 
 def call(name: str, arguments: dict):
@@ -132,6 +201,12 @@ def call(name: str, arguments: dict):
     elif name in GATEWAY_READS:
         path, _ = GATEWAY_READS[name]
         status, body = rest_client.request_json("GET", path)
+    elif name == "upload_logs":
+        err, prepared = _prepare_upload(arguments)
+        if err is not None:
+            return err  # 前置校验失败：结构化错误，不调平台
+        files, form = prepared
+        status, body = rest_client.request_multipart("POST", "/logs/upload", files=files, data=form)
     else:
         raise ValueError(f"unknown tool: {name}")
 

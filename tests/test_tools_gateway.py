@@ -35,7 +35,8 @@ def test_gateway_read_ok_passthrough(mock_rest, name, path):
     payload = {"sentinel": name}
     mock_rest.add("GET", path, json=payload)
     assert tools.call(name, {}) == payload
-    assert mock_rest.requests[-1] == {"method": "GET", "path": path, "params": {}, "json": None}
+    req = mock_rest.requests[-1]
+    assert (req["method"], req["path"], req["params"], req["json"]) == ("GET", path, {}, None)
 
 
 def test_gateway_read_non_2xx_structured_error(mock_rest):

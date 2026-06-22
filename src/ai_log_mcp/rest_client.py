@@ -24,6 +24,14 @@ def fetch_openapi() -> dict:
         return resp.json()
 
 
+def _body(resp: httpx.Response):
+    """body 优先按 JSON 解析，失败则回退原始文本。"""
+    try:
+        return resp.json()
+    except ValueError:
+        return resp.text
+
+
 def request_json(method: str, path: str, *, params: dict | None = None, json: dict | None = None):
     """发一次 REST 请求，返回 (status_code, body)。
 
@@ -32,8 +40,15 @@ def request_json(method: str, path: str, *, params: dict | None = None, json: di
     """
     with make_client() as client:
         resp = client.request(method, path, params=params, json=json)
-        try:
-            body = resp.json()
-        except ValueError:
-            body = resp.text
-        return resp.status_code, body
+        return resp.status_code, _body(resp)
+
+
+def request_multipart(method: str, path: str, *, files: dict, data: dict | None = None):
+    """发一次 multipart/form-data 请求，返回 (status_code, body)。
+
+    files / data 直接透传给 httpx（见 DESIGN §6.1：file 走 files，source 走 data）。
+    同样不抛非 2xx。
+    """
+    with make_client() as client:
+        resp = client.request(method, path, files=files, data=data)
+        return resp.status_code, _body(resp)

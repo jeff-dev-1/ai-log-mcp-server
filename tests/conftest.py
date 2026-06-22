@@ -29,7 +29,9 @@ class _Router:
         except ValueError:
             body = None
         self.requests.append({"method": request.method.upper(), "path": request.url.path,
-                              "params": dict(request.url.params), "json": body})
+                              "params": dict(request.url.params), "json": body,
+                              "content_type": request.headers.get("content-type", ""),
+                              "raw": request.content})
         key = (request.method.upper(), request.url.path)
         if key not in self._routes:
             return httpx.Response(404, json={"detail": f"no mock for {key}"})
