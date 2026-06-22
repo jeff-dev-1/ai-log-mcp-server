@@ -59,6 +59,33 @@ TOOLS: list[types.Tool] = [
 # chat_query 允许透传给平台的字段（来自 ChatRequest）。
 _CHAT_FIELDS = ("question", "log_id", "top_k", "backend", "scenario")
 
+# ── 网关安全·只读（无参 GET，表驱动）─────────────────────────────────────────────
+# {tool 名: (REST 路径, description)}。openapi 无输出 schema，description 是调用方选 tool 的唯一依据。
+# 输出按现有模式原样透传；映射可追溯到 DESIGN.md §3.2。
+GATEWAY_READS: dict[str, tuple[str, str]] = {
+    "gateway_observability": (
+        "/gateway/observability",
+        "返回 AI 网关的可观测指标：调用总数/失败数/拦截数、错误率、token 用量与成本、p50/p95 延迟，以及按模型/后端/提供方的分布与近期调用。",
+    ),
+    "gateway_info": (
+        "/gateway/info",
+        "返回 AI 网关的配置信息：网关名称、当前 provider、默认后端、可用后端列表及其路由、guardrails 护栏配置。",
+    ),
+    "gateway_prompts": (
+        "/gateway/prompts",
+        "返回 AI 网关使用的提示词：系统提示词（system_prompts）与各场景提示词（scenario_prompts）。",
+    ),
+}
+
+for _name, (_path, _desc) in GATEWAY_READS.items():
+    TOOLS.append(
+        types.Tool(
+            name=_name,
+            description=f"{_desc}（GET {_path}）",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        )
+    )
+
 
 def _error(status: int, body) -> dict:
     """DESIGN §4 结构化错误。"""
@@ -86,6 +113,9 @@ def call(name: str, arguments: dict):
         # 只透传 ChatRequest 定义的字段；缺省值交给平台，不在本地臆造。
         payload = {k: arguments[k] for k in _CHAT_FIELDS if arguments.get(k) is not None}
         status, body = rest_client.request_json("POST", "/chat/query", json=payload)
+    elif name in GATEWAY_READS:
+        path, _ = GATEWAY_READS[name]
+        status, body = rest_client.request_json("GET", path)
     else:
         raise ValueError(f"unknown tool: {name}")
 
