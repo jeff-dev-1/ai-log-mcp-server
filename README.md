@@ -10,7 +10,7 @@
 
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
-| `APP_BASE_URL` | 平台 REST 基址 | `http://192.168.88.210:8000` |
+| `APP_BASE_URL` | 平台 REST 基址 | `http://localhost:8000` |
 
 > backend REST 是开放的（登录门只在前端），无需鉴权 token。
 
@@ -21,7 +21,7 @@
 pip install -e .
 
 # 2. 指定平台地址（不指定则用默认 demo 地址）
-export APP_BASE_URL="http://192.168.88.210:8000"
+export APP_BASE_URL="http://localhost:8000"
 
 # 3. 以 stdio 方式启动 MCP server
 python -m ai_log_mcp.server
@@ -84,7 +84,7 @@ python -m ai_log_mcp.server
       "command": "python",
       "args": ["-m", "ai_log_mcp.server"],
       "env": {
-        "APP_BASE_URL": "http://192.168.88.210:8000"
+        "APP_BASE_URL": "http://localhost:8000"
       }
     }
   }
@@ -104,7 +104,7 @@ python -m ai_log_mcp.server
       "command": "python",
       "args": ["-m", "ai_log_mcp.server"],
       "env": {
-        "APP_BASE_URL": "http://192.168.88.210:8000"
+        "APP_BASE_URL": "http://localhost:8000"
       }
     }
   }
@@ -130,6 +130,6 @@ python scripts/smoke_stdio.py             # 期望: 列出 14 个 tool + health 
 
 ## 参考链接
 
-- demo UI：http://192.168.88.210:3000/ （登录 `admin` / `vibecoding2026`，仅前端）
-- REST 文档（人读）：http://192.168.88.210:8000/docs
-- 机读契约（唯一权威）：http://192.168.88.210:8000/openapi.json
+- demo UI：http://localhost:3000/ （登录 `admin` / `<由讲师提供>`，仅前端）
+- REST 文档（人读）：http://localhost:8000/docs
+- 机读契约（唯一权威）：http://localhost:8000/openapi.json

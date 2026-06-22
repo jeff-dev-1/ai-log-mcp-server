@@ -2,7 +2,7 @@
 
 显式运行：
     pytest -m integration
-需能访问 ${APP_BASE_URL}（默认 http://192.168.88.210:8000）。
+需能访问 ${APP_BASE_URL}（默认 http://localhost:8000）。
 """
 
 import pytest

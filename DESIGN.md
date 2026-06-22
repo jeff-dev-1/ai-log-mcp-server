@@ -86,7 +86,7 @@ ${APP_BASE_URL}/openapi.json
 
 ## 4. 通用约定
 
-- **base URL**：所有 tool 的请求基址 = `APP_BASE_URL`（默认 `http://192.168.88.210:8000`）。
+- **base URL**：所有 tool 的请求基址 = `APP_BASE_URL`（默认 `http://localhost:8000`）。
 - **鉴权**：无。不带 token、不做登录（backend REST 开放）。
 - **错误处理**：REST 返回非 2xx 时，tool 返回结构化错误（含 status code + 响应体），不吞错、不重试登录。
 - **超时**：统一设置 httpx 超时（具体值在实现阶段定，记入代码注释）。

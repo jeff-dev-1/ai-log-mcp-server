@@ -48,13 +48,13 @@ ai-log-mcp-server/
 
 ## 5. 必须执行
 
-- ✅ 平台地址通过 `APP_BASE_URL` 读取，默认 `http://192.168.88.210:8000`。
+- ✅ 平台地址通过 `APP_BASE_URL` 读取，默认 `http://localhost:8000`。
 - ✅ 每次新增/修改 tool 前，先拉取 `${APP_BASE_URL}/openapi.json` 与 `DESIGN.md` 对照。
 - ✅ 每个 MCP tool 必须能一一追溯到一个具体 REST 端点（方法 + 路径）。
 - ✅ 契约（openapi）与设计（DESIGN.md）发生漂移时，按 `WORKFLOW.md` 的变更流程处理：先同步契约 → 改设计 → 再改代码。
 
 ## 6. 环境信息（参考，非配置源）
 
-- demo UI：`http://192.168.88.210:3000/`（登录 `admin` / `vibecoding2026`，**仅前端登录门**）
-- REST 文档（人读）：`http://192.168.88.210:8000/docs`
-- 机读契约（唯一权威）：`http://192.168.88.210:8000/openapi.json`
+- demo UI：`http://localhost:3000/`（登录 `admin` / `<由讲师提供>`，**仅前端登录门**）
+- REST 文档（人读）：`http://localhost:8000/docs`
+- 机读契约（唯一权威）：`http://localhost:8000/openapi.json`

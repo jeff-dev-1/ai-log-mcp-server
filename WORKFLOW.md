@@ -18,7 +18,7 @@
 
 目标：按 DESIGN 注册 tools。
 
-1. 读 `APP_BASE_URL`（默认 `http://192.168.88.210:8000`）。
+1. 读 `APP_BASE_URL`（默认 `http://localhost:8000`）。
 2. 用官方 `mcp` SDK + stdio 起 server。
 3. 为映射表每一行注册一个 tool，逻辑只有三步：**组装请求 → `httpx` 调 REST → 透传响应**。
 4. inputSchema 取自 openapi（见 DESIGN 第 1 节），不手写字段。
@@ -41,7 +41,7 @@
 
 ### 本轮验收记录（MVP 收口，对照 PRD §4 A1–A7）
 
-> 执行环境：可直连 `http://192.168.88.210:8000`。tag 截至 `step-3d`，本节落盘于 `step-3e`。
+> 执行环境：可直连 `http://localhost:8000`。tag 截至 `step-3d`，本节落盘于 `step-3e`。
 
 | # | 标准 | 结论 | 验证命令 / 证据 |
 | --- | --- | --- | --- |

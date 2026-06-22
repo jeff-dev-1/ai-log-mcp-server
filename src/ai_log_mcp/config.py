@@ -3,7 +3,7 @@
 import os
 
 # 仅此一处默认值（与 .env.example / README 保持一致）。
-DEFAULT_BASE_URL = "http://192.168.88.210:8000"
+DEFAULT_BASE_URL = "http://localhost:8000"
 
 # upload_logs 字节上限默认 5 MB（见 DESIGN §6.4）。
 DEFAULT_UPLOAD_MAX_BYTES = 5 * 1024 * 1024
