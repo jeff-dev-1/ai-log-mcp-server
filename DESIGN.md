@@ -44,12 +44,27 @@ ${APP_BASE_URL}/openapi.json
 
 > \* `chat_query` 语义为查询，但 HTTP 方法为 POST+body，无副作用；标「写形」以示其方法。
 
-### 3.2 待后续批次（本轮不实现）
+### 3.2 网关安全·只读（gateway 只读批次）
+
+> 全部为无入参 GET。openapi 未声明输出 schema，故 `description`（见代码）是调用方选 tool 的唯一依据；
+> 出参列「无 schema」表示 openapi 无强类型定义，输出按现有模式原样透传。
+
+| MCP tool | HTTP 方法 + 路径 | 入参 | 出参（openapi） | 类型 | 返回内容 |
+| --- | --- | --- | --- | --- | --- |
+| `gateway_observability` | `GET /gateway/observability` | 无 | object（无强类型） | 只读 | 网关可观测指标：调用/失败/拦截数、错误率、token 用量与成本、p50/p95 延迟、按模型/后端/提供方分布 |
+| `gateway_info` | `GET /gateway/info` | 无 | object（无强类型） | 只读 | 网关配置：网关名、当前 provider、默认后端、后端列表与路由、guardrails 配置 |
+| `gateway_prompts` | `GET /gateway/prompts` | 无 | object（无强类型） | 只读 | 网关提示词：system_prompts 与 scenario_prompts |
+| `gateway_redteam_report` | `GET /gateway/redteam-report` | 无 | 无 schema | 只读 | 红队测试报告：整体通过率、各类别（注入/越狱/PII…）通过情况与失败用例 |
+| `gateway_supply_chain_report` | `GET /gateway/supply-chain-report` | 无 | 无 schema | 只读 | 供应链安全报告：放行/拦截/待审批计数与各依赖判定 |
+| `gateway_pentest_report` | `GET /gateway/pentest-report` | 无 | 无 schema | 只读 | 渗透测试报告：目标、gate 结论、高/中危数量与各项 findings |
+| `gateway_supply_chain_samples` | `GET /gateway/supply-chain/samples` | 无 | object（无强类型） | 只读 | 供应链检查的可选样本：是否启用、支持的市场（PyPI/npm/HuggingFace…）与示例 |
+
+### 3.3 待后续批次（仍未实现）
 
 | 候选 tool | 端点 | 类型 | 推迟原因 |
 | --- | --- | --- | --- |
-| `upload_logs` | `POST /logs/upload` | 写 | multipart 文件上传，参数传递特殊，单独成批 |
-| `gateway_*`（observability/info/prompts/各 report GET+POST/guardrail-test/supply-chain-check/samples 共 9 端点） | `GET,POST /gateway/*` | 读+写 | 独立「AI 网关安全」域，与核心日志解耦，单独成批 |
+| `upload_logs` | `POST /logs/upload` | 写 | multipart 文件上传，参数传递特殊，单独成批（需先在 DESIGN 讨论方案） |
+| gateway 写操作（`guardrail-test` / `supply-chain-check` / 提交 redteam·supply-chain·pentest report 共 5 端点） | `POST /gateway/*` | 写 | 写副作用，单独成批 |
 
 > 推迟项不代表 Out of Scope（见 §5）；它们是未来批次，届时回到阶段 1 续填本表。
 
