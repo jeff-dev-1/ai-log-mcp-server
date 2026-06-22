@@ -6,6 +6,40 @@
 - 设计原则：所有 tool 只转调平台 REST，不重写平台逻辑；schema 以平台 `/openapi.json` 为唯一来源。
 - 详见 `CLAUDE.md`（工程契约）、`DESIGN.md`（工具设计）、`WORKFLOW.md`（阶段协议）。
 
+## ⚠️ 前置依赖：业务平台必须在运行
+
+本 MCP server 是**薄壳**——它只把请求转发给「AI 日志分析平台」的 REST API。**平台不跑，14 个 tool 全部失败**。所以使用前先把平台起起来。
+
+### 前置条件
+- **Docker Desktop**（含 compose v2）—— 跑平台
+- **Python 3.10+** —— 跑本 MCP server
+- **Git**
+- **一个 MCP 客户端**：Claude Code / Claude Desktop / Cursor
+- **DeepSeek API key**（无则平台用 `--profile mock` 起一个 mock LLM）
+
+### 起一份自己的平台
+
+```bash
+git clone https://github.com/jeff-dev-1/vibecoding2026.git
+cd vibecoding2026
+cp .env.example .env          # 填 DEEPSEEK_API_KEY（没有就跳过，改用下方 mock）
+docker compose up -d          # 平台 → http://localhost:8000
+```
+
+> **想更快？** 若该仓含 `docker-compose.dist.yml`（直接拉预构建镜像，不本地编译），优先用它：
+> `docker compose -f docker-compose.dist.yml up -d`
+> 没有 DeepSeek key 时：`docker compose --profile mock up -d`（平台用内置 mock LLM）。
+
+### 连上 MCP
+
+```bash
+export APP_BASE_URL=http://localhost:8000
+python -m ai_log_mcp.check     # 确认 /openapi.json 可达
+# 再按下文「在 Claude Desktop / Cursor 注册」接入
+```
+
+平台跑起来、`check` 通过后，再回到本文档其余部分。
+
 ## 环境变量
 
 | 变量 | 说明 | 默认值 |
