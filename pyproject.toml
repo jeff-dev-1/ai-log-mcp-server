@@ -12,9 +12,23 @@ dependencies = [
     "httpx>=0.27",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
 [project.scripts]
 ai-log-mcp = "ai_log_mcp.server:main"
 ai-log-mcp-check = "ai_log_mcp.check:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+# 默认只跑单测（mock REST，不依赖 210 在线）；集成测试需显式 -m integration。
+addopts = "-m 'not integration'"
+asyncio_mode = "auto"
+markers = [
+    "integration: 需要可访问 ${APP_BASE_URL} 的连通性测试（默认跳过）",
+]
