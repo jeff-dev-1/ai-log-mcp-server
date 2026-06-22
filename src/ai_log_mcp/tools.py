@@ -19,7 +19,12 @@ UPLOAD_SOURCES = ("nginx", "app", "custom")
 TOOLS: list[types.Tool] = [
     types.Tool(
         name="list_logs",
-        description="列出最近的日志/任务（GET /logs）。",
+        description=(
+            "列出最近的日志分析任务清单（GET /logs）。"
+            "⚠️ 返回完整 job 对象、含内嵌的原始日志样本，体积大。"
+            "仅在需要『有哪些任务/任务状态』时用；"
+            "若问题是『有哪些错误/分析日志内容/归因』等分析类，请改用 chat_query。"
+        ),
         inputSchema={
             "type": "object",
             "properties": {
