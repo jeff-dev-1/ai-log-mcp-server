@@ -28,15 +28,30 @@ ${APP_BASE_URL}/openapi.json
 - tool 的输出 = REST 响应原样透传（不二次加工）。
 - 只读端点优先暴露；写操作端点需在表中标注「写操作」。
 
-## 3. Tool ↔ 端点映射表（骨架，待 openapi 填充）
+## 3. Tool ↔ 端点映射表
 
-| MCP tool | HTTP 方法 + 路径 | 入参来源（openapi） | 出参 | 类型 | 说明 |
+> 阶段 1 已执行：依据现查 `${APP_BASE_URL}/openapi.json`（共 14 端点）填充。
+> 入参/出参列只填 openapi 中的**引用位置**，不复制字段内容。
+
+### 3.1 本轮已实现（核心日志）
+
+| MCP tool | HTTP 方法 + 路径 | 入参来源（openapi） | 出参（openapi） | 类型 | 说明 |
 | --- | --- | --- | --- | --- | --- |
-| _TBD_ | `GET /...` | `paths./....parameters` | `...responses.200` | 只读 | 待填充 |
-| _TBD_ | `GET /.../{id}` | path 参数 | `...responses.200` | 只读 | 待填充 |
-| _TBD_ | `POST /...` | `requestBody` | `...responses.200` | 写操作 | 待填充 |
+| `list_logs` | `GET /logs` | `paths./logs.get.parameters`（query `limit`，可选） | `...responses.200`（array） | 只读 | 列最近日志/任务 |
+| `get_job` | `GET /logs/jobs/{job_id}` | `paths./logs/jobs/{job_id}.get.parameters`（path `job_id`，必填） | `#/components/schemas/JobResponse` | 只读 | 取某任务明细/结果 |
+| `chat_query` | `POST /chat/query` | `#/components/schemas/ChatRequest`（必填 `question`；可选 `log_id/top_k/backend/scenario`） | `#/components/schemas/ChatResponse` | 写形* | 对日志做 AI 问答/分析 |
+| `health` | `GET /health` | 无 | `#/components/schemas/HealthResponse` | 只读 | 平台健康/连通 |
 
-> 填充规则：遍历 openapi 的 `paths`，对每个 `(path, method)` 生成一行；入参/出参列只填**引用位置**（如 `paths./logs.get.parameters`），不复制字段内容。
+> \* `chat_query` 语义为查询，但 HTTP 方法为 POST+body，无副作用；标「写形」以示其方法。
+
+### 3.2 待后续批次（本轮不实现）
+
+| 候选 tool | 端点 | 类型 | 推迟原因 |
+| --- | --- | --- | --- |
+| `upload_logs` | `POST /logs/upload` | 写 | multipart 文件上传，参数传递特殊，单独成批 |
+| `gateway_*`（observability/info/prompts/各 report GET+POST/guardrail-test/supply-chain-check/samples 共 9 端点） | `GET,POST /gateway/*` | 读+写 | 独立「AI 网关安全」域，与核心日志解耦，单独成批 |
+
+> 推迟项不代表 Out of Scope（见 §5）；它们是未来批次，届时回到阶段 1 续填本表。
 
 ## 4. 通用约定
 
