@@ -16,7 +16,13 @@ import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-EXPECTED_TOOLS = {"list_logs", "get_job", "health", "chat_query"}
+CORE_TOOLS = {"list_logs", "get_job", "health", "chat_query"}
+GATEWAY_READ_TOOLS = {
+    "gateway_observability", "gateway_info", "gateway_prompts",
+    "gateway_redteam_report", "gateway_supply_chain_report",
+    "gateway_pentest_report", "gateway_supply_chain_samples",
+}
+EXPECTED_TOOLS = CORE_TOOLS | GATEWAY_READ_TOOLS  # 4 核心 + 7 网关只读 = 11
 
 
 async def _run() -> int:
@@ -28,9 +34,11 @@ async def _run() -> int:
 
             listed = await session.list_tools()
             names = {t.name for t in listed.tools}
-            print(f"[2] tools/list: {sorted(names)}")
+            print(f"[2] tools/list: {len(names)} tools {sorted(names)}")
             if names != EXPECTED_TOOLS:
-                print(f"    FAIL: expected {sorted(EXPECTED_TOOLS)}", file=sys.stderr)
+                missing = EXPECTED_TOOLS - names
+                extra = names - EXPECTED_TOOLS
+                print(f"    FAIL: expected {len(EXPECTED_TOOLS)} | missing={sorted(missing)} extra={sorted(extra)}", file=sys.stderr)
                 return 1
 
             result = await session.call_tool("health", {})

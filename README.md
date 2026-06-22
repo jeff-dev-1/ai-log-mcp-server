@@ -41,7 +41,21 @@ python -m ai_log_mcp.server
 | `chat_query` | `POST /chat/query` | `question`（必填）；`log_id`/`top_k`/`backend`/`scenario`（可选） | 对日志做 AI 问答/分析 |
 | `health` | `GET /health` | 无 | 平台健康/连通 |
 
-> upload（multipart）与 gateway/* 属后续批次，本轮未实现（见 `DESIGN.md` §3.2）。
+### 网关安全（只读，面向安全工程师）
+
+均为无入参 GET；openapi 无输出 schema，下表「返回内容」即选 tool 依据（见 `DESIGN.md` §3.2）。
+
+| tool | 端点 | 返回内容 |
+| --- | --- | --- |
+| `gateway_observability` | `GET /gateway/observability` | 网关指标：调用/失败/拦截数、错误率、token 用量与成本、p50/p95 延迟、分布 |
+| `gateway_info` | `GET /gateway/info` | 网关配置：网关名、provider、默认后端、后端列表与路由、guardrails |
+| `gateway_prompts` | `GET /gateway/prompts` | 网关提示词：system_prompts 与 scenario_prompts |
+| `gateway_redteam_report` | `GET /gateway/redteam-report` | 红队报告：通过率、各类别（注入/越狱/PII…）通过情况与失败用例 |
+| `gateway_supply_chain_report` | `GET /gateway/supply-chain-report` | 供应链报告：放行/拦截/待审批计数与各依赖判定 |
+| `gateway_pentest_report` | `GET /gateway/pentest-report` | 渗透报告：目标、gate 结论、高/中危数量与 findings |
+| `gateway_supply_chain_samples` | `GET /gateway/supply-chain/samples` | 供应链可选样本：启用状态、支持市场、示例样本 |
+
+> upload（multipart）与 gateway 写操作属后续批次，未实现（见 `DESIGN.md` §3.3）。
 
 ## 在 Claude Desktop 注册
 
@@ -86,13 +100,13 @@ python -m ai_log_mcp.server
 ```bash
 # 1. 单元测试（mock REST，不依赖平台在线）
 pip install -e '.[dev]'
-python -m pytest -q                       # 期望: 16 passed, 1 deselected
+python -m pytest -q                       # 期望: 26 passed, 1 deselected
 
 # 2. 连通性集成测试（需可达 ${APP_BASE_URL}）
 python -m pytest -m integration -q        # 期望: 1 passed
 
 # 3. stdio 协议级冒烟（真实 MCP client over stdio 驱动本 server）
-python scripts/smoke_stdio.py             # 期望: 列出 4 个 tool + health 返回, SMOKE OK
+python scripts/smoke_stdio.py             # 期望: 列出 11 个 tool + health 返回, SMOKE OK
 ```
 
 完整逐条验收（PRD §4 A1–A7）记录见 `WORKFLOW.md` 阶段 3。

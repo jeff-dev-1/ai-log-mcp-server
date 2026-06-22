@@ -55,6 +55,21 @@
 
 测试总览：`python -m pytest -q` → 16 passed, 1 deselected；`pytest -m integration -q` → 1 passed；`scripts/smoke_stdio.py` → SMOKE OK。
 
+### gateway 只读批次验收记录（step-4a..4d）
+
+> 范围：7 个无参 GET（DESIGN §3.2）。不改已冻结的 4 个核心 tool；不含 gateway 写操作与 upload。
+
+| # | 标准 | 结论 | 验证命令 / 证据 |
+| --- | --- | --- | --- |
+| G1 | 7 个 gateway 只读 tool 全部注册，tools/list 总数 4→11 | ✅ | `scripts/smoke_stdio.py` 断言 11 个且含 7 个新名 |
+| G2 | 每个 tool 有非空、说明返回内容的 description（openapi 无输出 schema） | ✅ | 单测 `test_every_gateway_tool_has_nonempty_description`；README 工具表 |
+| G3 | 均为无参 GET，路径正确，原样透传 | ✅ | 参数化单测 `test_gateway_read_ok_passthrough`（断言 method/path/无 body）；7 端点实跑返回真实字段 |
+| G4 | 非 2xx 返回结构化错误（DESIGN §4） | ✅ | 单测 `test_gateway_read_non_2xx_structured_error`（502→`{error,status,body}`） |
+| G5 | 不改已冻结的 4 个核心 tool 行为 | ✅ | 核心 tool 代码与单测未改；表驱动新增，互不影响 |
+| G6 | 仅实现只读，写操作/upload 未引入 | ✅ | `GATEWAY_READS` 仅含 7 个 GET；DESIGN §3.3 仍列 upload + 5 个写端点 |
+
+测试总览（本批后）：`pytest -q` → 26 passed, 1 deselected；`pytest -m integration -q` → 1 passed；`scripts/smoke_stdio.py` → SMOKE OK（11 tools）。
+
 ## 变更流程（平台 API 变更时）
 
 ```
