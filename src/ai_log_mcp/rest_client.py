@@ -22,3 +22,18 @@ def fetch_openapi() -> dict:
         resp = client.get("/openapi.json")
         resp.raise_for_status()
         return resp.json()
+
+
+def request_json(method: str, path: str, *, params: dict | None = None, json: dict | None = None):
+    """发一次 REST 请求，返回 (status_code, body)。
+
+    - 不抛非 2xx（交给上层 tool 按 DESIGN §4 组装结构化错误）。
+    - body 优先按 JSON 解析，失败则回退原始文本。
+    """
+    with make_client() as client:
+        resp = client.request(method, path, params=params, json=json)
+        try:
+            body = resp.json()
+        except ValueError:
+            body = resp.text
+        return resp.status_code, body

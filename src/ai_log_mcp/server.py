@@ -7,11 +7,13 @@
 """
 
 import asyncio
+import json
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 import mcp.types as types
 
+from . import tools
 from .config import get_base_url
 
 server = Server("ai-log-mcp")
@@ -19,20 +21,16 @@ server = Server("ai-log-mcp")
 
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:
-    """返回可用工具列表。
-
-    当前为空 —— 具体 tool 的入参/出参 schema 必须来自 ${APP_BASE_URL}/openapi.json，
-    不手抄、不臆造（CLAUDE.md 红线）。
-    """
-    # TODO(阶段 1): 拉取 openapi -> 按 DESIGN.md 映射表逐个生成 Tool。
-    return []
+    """返回可用工具列表（来自 tools.TOOLS，schema 源自 openapi）。"""
+    return tools.TOOLS
 
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    """工具调用分发位。骨架阶段无任何 tool，故一律报未知。"""
-    # TODO(阶段 2): 组装请求 -> rest_client 调 REST -> 透传响应。
-    raise ValueError(f"unknown tool: {name}")
+    """分发到 tools.call；REST 调用走线程池以不阻塞事件循环。结果以 JSON 文本透传。"""
+    result = await asyncio.to_thread(tools.call, name, arguments)
+    text = json.dumps(result, ensure_ascii=False, indent=2)
+    return [types.TextContent(type="text", text=text)]
 
 
 async def _run() -> None:
