@@ -128,6 +128,39 @@ TOOLS.append(
     )
 )
 
+# ── 网关动作（写/查询，DESIGN §3.3b）──────────────────────────────────────────────
+TOOLS.append(
+    types.Tool(
+        name="gateway_guardrail_test",
+        description="送一段文本，得 AI 网关护栏（guardrail）裁定（POST /gateway/guardrail-test）。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "待检测文本（必填，对应 GuardrailTestRequest.text）"},
+            },
+            "required": ["text"],
+        },
+    )
+)
+TOOLS.append(
+    types.Tool(
+        name="gateway_supply_chain_check",
+        description="送依赖标识，得供应链安全判定（POST /gateway/supply-chain-check）。",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "marketplace": {"type": "string", "description": "市场（必填，如 pypi/npm/hugging_face…）"},
+                "item_id": {"type": "string", "description": "条目标识（必填，如包名/模型名）"},
+                "version": {"type": "string", "maxLength": 60, "description": "版本（可选）"},
+            },
+            "required": ["marketplace", "item_id"],
+        },
+    )
+)
+
+# 各网关动作 tool 透传给平台的 body 字段（来自对应 openapi schema）。
+_SUPPLY_CHAIN_CHECK_FIELDS = ("marketplace", "item_id", "version")
+
 
 def _error(status: int, body) -> dict:
     """DESIGN §4 结构化错误（平台非 2xx）。"""
@@ -207,6 +240,13 @@ def call(name: str, arguments: dict):
             return err  # 前置校验失败：结构化错误，不调平台
         files, form = prepared
         status, body = rest_client.request_multipart("POST", "/logs/upload", files=files, data=form)
+    elif name == "gateway_guardrail_test":
+        payload = {"text": arguments.get("text")}
+        status, body = rest_client.request_json("POST", "/gateway/guardrail-test", json=payload)
+    elif name == "gateway_supply_chain_check":
+        # 只透传已提供字段；缺必填项交平台返回 422（§4）。
+        payload = {k: arguments[k] for k in _SUPPLY_CHAIN_CHECK_FIELDS if arguments.get(k) is not None}
+        status, body = rest_client.request_json("POST", "/gateway/supply-chain-check", json=payload)
     else:
         raise ValueError(f"unknown tool: {name}")
 
