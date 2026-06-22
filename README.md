@@ -55,7 +55,14 @@ python -m ai_log_mcp.server
 | `gateway_pentest_report` | `GET /gateway/pentest-report` | 渗透报告：目标、gate 结论、高/中危数量与 findings |
 | `gateway_supply_chain_samples` | `GET /gateway/supply-chain/samples` | 供应链可选样本：启用状态、支持市场、示例样本 |
 
-> upload（multipart）与 gateway 写操作属后续批次，未实现（见 `DESIGN.md` §3.3）。
+### 上传（写操作）
+
+| tool | 端点 | 入参 | 说明 |
+| --- | --- | --- | --- |
+| `upload_logs` | `POST /logs/upload`（multipart） | `file_path?` / `content?`（互斥，二选一）；`filename?`；`source?`（`nginx`/`app`/`custom`） | 上传日志文件做分析，返回 `UploadResponse` |
+
+> `file_path` 首选（本地路径，server 读盘上传）；`content` 兜底（内联文本，不依赖文件系统）。大小上限默认 5 MB，可经 `UPLOAD_MAX_BYTES` 调整。详见 `DESIGN.md` §6。
+> gateway 写操作（guardrail-test / supply-chain-check / 提交各 report）仍属后续批次（见 `DESIGN.md` §3.3）。
 
 ## 在 Claude Desktop 注册
 
@@ -100,13 +107,14 @@ python -m ai_log_mcp.server
 ```bash
 # 1. 单元测试（mock REST，不依赖平台在线）
 pip install -e '.[dev]'
-python -m pytest -q                       # 期望: 26 passed, 1 deselected
+python -m pytest -q                       # 期望: 36 passed, 2 deselected
 
-# 2. 连通性集成测试（需可达 ${APP_BASE_URL}）
-python -m pytest -m integration -q        # 期望: 1 passed
+# 2. 集成测试（需可达 ${APP_BASE_URL}）。⚠️ 含真上传，有副作用：会在平台创建真任务、污染数据
+python -m pytest -m integration -q        # 期望: 2 passed（连通性 + 真上传）
+#   只跑连通性、不触发上传：pytest -m integration -k "not upload"
 
 # 3. stdio 协议级冒烟（真实 MCP client over stdio 驱动本 server）
-python scripts/smoke_stdio.py             # 期望: 列出 11 个 tool + health 返回, SMOKE OK
+python scripts/smoke_stdio.py             # 期望: 列出 12 个 tool + health 返回, SMOKE OK
 ```
 
 完整逐条验收（PRD §4 A1–A7）记录见 `WORKFLOW.md` 阶段 3。

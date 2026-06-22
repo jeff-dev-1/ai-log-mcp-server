@@ -22,7 +22,8 @@ GATEWAY_READ_TOOLS = {
     "gateway_redteam_report", "gateway_supply_chain_report",
     "gateway_pentest_report", "gateway_supply_chain_samples",
 }
-EXPECTED_TOOLS = CORE_TOOLS | GATEWAY_READ_TOOLS  # 4 核心 + 7 网关只读 = 11
+WRITE_TOOLS = {"upload_logs"}
+EXPECTED_TOOLS = CORE_TOOLS | GATEWAY_READ_TOOLS | WRITE_TOOLS  # 4 + 7 + 1 = 12
 
 
 async def _run() -> int:

@@ -70,6 +70,26 @@
 
 测试总览（本批后）：`pytest -q` → 26 passed, 1 deselected；`pytest -m integration -q` → 1 passed；`scripts/smoke_stdio.py` → SMOKE OK（11 tools）。
 
+### upload_logs 批次验收记录（step-5a..5c）
+
+> 范围：`POST /logs/upload`（multipart），按 DESIGN §6 方案 C（file_path 首选 / content 兜底，互斥）。重点是 tool 侧前置校验。不改已冻结的 11 个 tool。
+
+| # | 标准 | 结论 | 验证命令 / 证据 |
+| --- | --- | --- | --- |
+| U1 | tool 注册，tools/list 总数 11→12 | ✅ | `scripts/smoke_stdio.py` 断言 12 个且含 `upload_logs` |
+| U2 | schema 取自 openapi（source 枚举 nginx/app/custom） | ✅ | `tools.UPLOAD_SOURCES` 对齐 `Body_upload_logs_upload_post.source`；inputSchema 见代码 |
+| U3 | file_path 成功：读盘 → multipart（file 字节+basename+source） | ✅ | 单测 `test_file_path_success_sends_multipart`（断言 content-type、file 字节、文件名、source） |
+| U4 | content 成功：内联文本 → multipart（默认 upload.log，未给 source 不发） | ✅ | 单测 `test_content_success_default_filename` |
+| U5 | 互斥冲突（都给/都不给）→ 结构化错误，未触达平台 | ✅ | 单测 `test_mutual_exclusion_both` / `_neither`（`requests == []`） |
+| U6 | 超大小上限（默认 5MB，可经 UPLOAD_MAX_BYTES 调）→ 结构化错误 | ✅ | 单测 `test_oversize_rejected`（env 设 10 字节） |
+| U7 | source 非法枚举 → 结构化错误，不透传 | ✅ | 单测 `test_bad_source_enum` |
+| U8 | file_path 不存在/非普通文件 → 结构化错误，不抛栈 | ✅ | 单测 `test_file_path_missing` / `_not_regular_file` |
+| U9 | 平台非 2xx → DESIGN §4 结构化错误 | ✅ | 单测 `test_platform_422_structured_error` |
+| U10 | 真上传有副作用，隔离在 @integration（默认跳过，一次性极小文件） | ✅ | `test_real_upload_side_effect` 带 `@pytest.mark.integration`；默认 deselected |
+
+测试总览（本批后）：`pytest -q` → 36 passed, 2 deselected；`scripts/smoke_stdio.py` → SMOKE OK（12 tools）。
+集成（含真上传副作用）：`pytest -m integration -q` → 2 passed；仅连通性用 `pytest -m integration -k "not upload"`。
+
 ## 变更流程（平台 API 变更时）
 
 ```

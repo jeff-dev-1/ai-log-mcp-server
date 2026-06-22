@@ -59,11 +59,16 @@ ${APP_BASE_URL}/openapi.json
 | `gateway_pentest_report` | `GET /gateway/pentest-report` | 无 | 无 schema | 只读 | 渗透测试报告：目标、gate 结论、高/中危数量与各项 findings |
 | `gateway_supply_chain_samples` | `GET /gateway/supply-chain/samples` | 无 | object（无强类型） | 只读 | 供应链检查的可选样本：是否启用、支持的市场（PyPI/npm/HuggingFace…）与示例 |
 
+### 3.3a 上传（写操作，已实现）
+
+| MCP tool | HTTP 方法 + 路径 | 入参（openapi / §6） | 出参（openapi） | 类型 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `upload_logs` | `POST /logs/upload`（multipart） | `Body_upload_logs_upload_post`：`file`(必填) + `source`(enum) → tool 入参 `file_path?`/`content?`(互斥)/`filename?`/`source?` | `#/components/schemas/UploadResponse` | 写 | 上传日志文件做分析（方案见 §6） |
+
 ### 3.3 待后续批次（仍未实现）
 
 | 候选 tool | 端点 | 类型 | 推迟原因 |
 | --- | --- | --- | --- |
-| `upload_logs` | `POST /logs/upload` | 写 | multipart 文件上传，参数传递特殊，单独成批（需先在 DESIGN 讨论方案） |
 | gateway 写操作（`guardrail-test` / `supply-chain-check` / 提交 redteam·supply-chain·pentest report 共 5 端点） | `POST /gateway/*` | 写 | 写副作用，单独成批 |
 
 > 推迟项不代表 Out of Scope（见 §5）；它们是未来批次，届时回到阶段 1 续填本表。
@@ -79,3 +84,61 @@ ${APP_BASE_URL}/openapi.json
 
 - 不暴露前端专用 / 登录相关端点（若 openapi 中存在）。
 - 不做分页聚合、缓存、字段裁剪等「平台逻辑」——交给调用方或平台。
+
+## 6. multipart 上传方案（`upload_logs` 设计，暂不实现）
+
+> 仅设计讨论，本节不产代码、不注册 tool。落地见后续单独批次。
+
+### 6.1 真实契约（现查 openapi，不臆造）
+
+`POST /logs/upload`，`requestBody.required = true`，`content-type: multipart/form-data`，
+schema `#/components/schemas/Body_upload_logs_upload_post`：
+
+| form 字段 | 类型 | 必填 | 约束/默认 |
+| --- | --- | --- | --- |
+| `file` | string(binary) | 是 | 上传的日志文件本体 |
+| `source` | string(enum) | 否 | 取值 `nginx` / `app` / `custom`，默认 `custom` |
+
+响应：`200 → #/components/schemas/UploadResponse`；`422 → #/components/schemas/HTTPValidationError`。
+
+> 关键事实：multipart 只有 `file` + 可选 `source` 两个字段，**字段名为 `file`**（httpx `files={"file": ...}`），`source` 走普通 form 字段（`data={"source": ...}`）。
+
+### 6.2 候选入参方案与取舍
+
+MCP tool 的入参是 JSON（无原生文件类型），需把「文件」编码进 JSON 参数。三种承接方式：
+
+| 方案 | 入参 | 优点 | 缺点 |
+| --- | --- | --- | --- |
+| **A. file_path** | `file_path`（本地路径）+ `source?` | 贴合本地 stdio 形态；大文件不进 MCP 上下文，仅在 server 侧读盘后流式上传 | server 需读任意本地路径，有安全面；若 server 在远端则路径不可达 |
+| **B. content(+filename)** | `content`（日志文本）+ `filename?` + `source?` | 不依赖文件系统，远端部署同样可用；调用方/模型可直接给文本 | 大文件撑爆 MCP 参数与对话上下文；二进制/超大日志不适用 |
+| **C. 两者都支持** | A、B 二选一（互斥） | 兼顾本地与远端两种形态 | 实现/校验更复杂；需明确互斥与优先级；测试面更大 |
+
+### 6.3 推荐方案 + 理由
+
+**推荐 C（A+B 二选一，互斥），但以 A 为首选路径、B 为补充。**
+
+理由（结合本 server 运行形态）：
+- 本 server 是 **stdio**，绝大多数场景与用户在**同一台机器**（Claude Desktop / Cursor 本地拉起）→ A（`file_path`）最自然，且不把日志塞进上下文。
+- 但 server 也**可能部署在远端**（A 的路径不可达）→ 保留 B（`content`）作为不依赖文件系统的兜底。
+- 二者**互斥**：同次调用只接受其一；都给或都不给 → 报参数错误（不猜测）。
+
+### 6.4 边界（落地时必须遵守）
+
+- **大小上限**：tool 侧设上限（建议默认 **5 MB**，可经环境变量如 `UPLOAD_MAX_BYTES` 调整）。
+  - A：读盘前先 `stat` 校验大小，超限直接拒绝，不读入内存。
+  - B：对 `content` 字节数做同样上限；提示大文件改用 A。
+- **路径限制（方案 A）**：
+  - 仅接受**普通文件**（拒绝目录/符号链接指向的特殊文件）；
+  - 可选地限制在某允许根目录内（如 `UPLOAD_ALLOWED_ROOT`），默认不开启则记录"读任意路径"为已知风险；
+  - 文件不存在/不可读 → 结构化错误，不抛栈。
+- **字段映射**：`file` 走 httpx `files=`；`source` 仅允许枚举 `nginx/app/custom`，非法值在 tool 侧拦截（对齐 openapi enum），不透传给平台再吃 422。
+- **错误处理**：沿用 DESIGN §4——平台非 2xx 返回 `{error, status, body}`；tool 侧前置校验失败（互斥冲突/超限/路径非法/枚举非法）同样返回结构化错误，不静默。
+- **不做的事**：不解析/不改写日志内容、不分片续传、不重试（与 §1「只转调、不重写平台逻辑」一致）。
+
+### 6.5 拟定 tool 形态（仅设计，供落地参考）
+
+- 名称：`upload_logs`，类型：写操作。
+- inputSchema（落地时以 openapi enum 为准）：
+  - `file_path?: string`、`content?: string`、`filename?: string`、`source?: enum(nginx|app|custom, 默认 custom)`
+  - 约束：`file_path` 与 `content` 互斥且至少其一；`filename` 仅配合 `content` 使用。
+- 行为：按方案读取字节 → `files={"file": (filename, bytes)}` + `data={"source": source}` → `POST /logs/upload` → 透传 `UploadResponse`。
