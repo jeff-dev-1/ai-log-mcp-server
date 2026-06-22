@@ -39,6 +39,22 @@
 | 5 | 可换环境 | 改 `APP_BASE_URL` 后请求目标随之改变，无需改代码 |
 | 6 | 注册可用 | 按 README 配置后，Claude/Cursor 能看到并调用这些工具 |
 
+### 本轮验收记录（MVP 收口，对照 PRD §4 A1–A7）
+
+> 执行环境：可直连 `http://192.168.88.210:8000`。tag 截至 `step-3d`，本节落盘于 `step-3e`。
+
+| # | 标准 | 结论 | 验证命令 / 证据 |
+| --- | --- | --- | --- |
+| A1 | 每个 MVP 能力(C1–C4)至少 1 个 tool 在 `tools/list` | ✅ | `python scripts/smoke_stdio.py` → 列出 `chat_query/get_job/health/list_logs` 共 4 个 |
+| A2 | 检索类 tool 返回字段同 openapi response，无臆造 | ✅ | 单测 `test_tools_readonly.py` 透传不改字段；实跑 `get_job` 返回 openapi `JobResponse` 字段集 |
+| A3 | 分析类产出来自平台 REST（非本地生成） | ✅ | 实跑 `chat_query` 返回平台 `ChatResponse`（answer/citations/redaction…）；代码仅转发，无本地计算 |
+| A4 | 改 `APP_BASE_URL` 请求目标随之变，免改码 | ✅ | `APP_BASE_URL=http://example.test:9999 python -c '...make_client().base_url'` → `http://example.test:9999` |
+| A5 | 全链路无登录/token | ✅ | `grep -rinE 'token|authorization|bearer|login|password|api[_-]?key' src/` 仅命中注释，无鉴权代码 |
+| A6 | 非 2xx 返回结构化错误(status+body)，不吞错 | ✅ | 单测 `test_non_2xx_returns_structured_error`；实跑非法 job_id → `{error,status:422,body}` |
+| A7 | openapi 未暴露的能力无对应 tool | ✅ | `tools/list`=4，均映射 DESIGN §3.1 既有端点；upload/gateway 未注册（§3.2 推迟） |
+
+测试总览：`python -m pytest -q` → 16 passed, 1 deselected；`pytest -m integration -q` → 1 passed；`scripts/smoke_stdio.py` → SMOKE OK。
+
 ## 变更流程（平台 API 变更时）
 
 ```

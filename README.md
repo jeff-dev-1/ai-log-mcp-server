@@ -17,7 +17,7 @@
 ## 本地运行
 
 ```bash
-# 1. 安装依赖（实现阶段产出 pyproject.toml 后）
+# 1. 安装（含测试依赖用 .[dev]）
 pip install -e .
 
 # 2. 指定平台地址（不指定则用默认 demo 地址）
@@ -28,6 +28,20 @@ python -m ai_log_mcp.server
 ```
 
 > 调试推荐用 MCP Inspector：`npx @modelcontextprotocol/inspector python -m ai_log_mcp.server`
+> 连通自检：`python -m ai_log_mcp.check`（拉到 `${APP_BASE_URL}/openapi.json` 即通）
+
+## 可用工具（本轮 MVP）
+
+所有 tool 的入参/出参 schema 以 `${APP_BASE_URL}/openapi.json` 为唯一来源（见 `DESIGN.md` §3.1），只转调 REST、原样透传响应；非 2xx 返回 `{error, status, body}`。
+
+| tool | 端点 | 入参 | 说明 |
+| --- | --- | --- | --- |
+| `list_logs` | `GET /logs` | `limit`（可选, int） | 列最近日志/任务 |
+| `get_job` | `GET /logs/jobs/{job_id}` | `job_id`（必填, str） | 取某任务明细/结果 |
+| `chat_query` | `POST /chat/query` | `question`（必填）；`log_id`/`top_k`/`backend`/`scenario`（可选） | 对日志做 AI 问答/分析 |
+| `health` | `GET /health` | 无 | 平台健康/连通 |
+
+> upload（multipart）与 gateway/* 属后续批次，本轮未实现（见 `DESIGN.md` §3.2）。
 
 ## 在 Claude Desktop 注册
 
@@ -66,6 +80,22 @@ python -m ai_log_mcp.server
   }
 }
 ```
+
+## 如何验收
+
+```bash
+# 1. 单元测试（mock REST，不依赖平台在线）
+pip install -e '.[dev]'
+python -m pytest -q                       # 期望: 16 passed, 1 deselected
+
+# 2. 连通性集成测试（需可达 ${APP_BASE_URL}）
+python -m pytest -m integration -q        # 期望: 1 passed
+
+# 3. stdio 协议级冒烟（真实 MCP client over stdio 驱动本 server）
+python scripts/smoke_stdio.py             # 期望: 列出 4 个 tool + health 返回, SMOKE OK
+```
+
+完整逐条验收（PRD §4 A1–A7）记录见 `WORKFLOW.md` 阶段 3。
 
 ## 参考链接
 

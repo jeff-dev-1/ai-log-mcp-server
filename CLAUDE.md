@@ -30,7 +30,10 @@ ai-log-mcp-server/
 ├── README.md          # 给人看：怎么跑、怎么注册
 ├── docs/
 │   └── PRD.md         # 产品需求（目标用户/MVP 边界/数据流/验收/风险）
-└── src/ai_log_mcp/    # 代码（本轮不产，后续按 DESIGN 实现）
+├── scripts/
+│   └── smoke_stdio.py # stdio 协议级冒烟（官方 mcp SDK client over stdio）
+├── tests/             # pytest 单测（mock REST）+ 可选 @integration
+└── src/ai_log_mcp/    # 代码：按 DESIGN §3.1 实现的 tool
 ```
 
 ## 4. 禁止事项（红线）
